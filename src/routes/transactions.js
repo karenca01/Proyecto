@@ -1,13 +1,13 @@
 import express from 'express';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
 // Get all transactions (admin only)
 router.get('/', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { data: transactions, error } = await supabase
+    const { data: transactions, error } = await supabaseAdmin
       .from('transactions')
       .select(`
         *,
@@ -73,8 +73,8 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Product out of stock' });
     }
 
-    // Start transaction
-    const { data: transaction, error: transactionError } = await supabase
+    // Start transaction using admin client to bypass RLS
+    const { data: transaction, error: transactionError } = await supabaseAdmin
       .from('transactions')
       .insert([{ user_id, product_id, branch_id }])
       .select(`
@@ -86,8 +86,8 @@ router.post('/', authenticateToken, async (req, res) => {
 
     if (transactionError) throw transactionError;
 
-    // Update inventory
-    const { error: updateError } = await supabase
+    // Update inventory using admin client to bypass RLS
+    const { error: updateError } = await supabaseAdmin
       .from('inventory')
       .update({ quantity: inventory.quantity - 1 })
       .eq('product_id', product_id)

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 import bcrypt from 'bcrypt';
 
 const router = express.Router();
@@ -8,7 +8,7 @@ const router = express.Router();
 // Get all users (admin only)
 router.get('/', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { data: users, error } = await supabase
+    const { data: users, error } = await supabaseAdmin
       .from('users')
       .select('id, email, user_type')
       .order('id');
@@ -54,7 +54,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const { data: newUser, error } = await supabase
+    const { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert([{ email, password: hashedPassword, user_type }])
       .select('id, email, user_type')
@@ -88,7 +88,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       updates.password = await bcrypt.hash(password, salt);
     }
 
-    const { data: updatedUser, error } = await supabase
+    const { data: updatedUser, error } = await supabaseAdmin
       .from('users')
       .update(updates)
       .eq('id', req.params.id)
@@ -108,7 +108,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete user (admin only)
 router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('users')
       .delete()
       .eq('id', req.params.id);

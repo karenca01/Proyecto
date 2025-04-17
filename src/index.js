@@ -15,6 +15,12 @@ export const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
+// Initialize Supabase admin client with service role key for bypassing RLS
+export const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 // Middleware
 app.use(cors());
 app.use(express.json());

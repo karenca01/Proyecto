@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { name } = req.body;
 
-    const { data: newCategory, error } = await supabase
+    const { data: newCategory, error } = await supabaseAdmin
       .from('categories')
       .insert([{ name }])
       .select()
@@ -42,7 +42,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
 // Delete category (admin only)
 router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('categories')
       .delete()
       .eq('id', req.params.id);

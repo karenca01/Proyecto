@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
@@ -44,7 +44,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { name, state } = req.body;
 
-    const { data: newBranch, error } = await supabase
+    const { data: newBranch, error } = await supabaseAdmin
       .from('branches')
       .insert([{ name, state }])
       .select()
@@ -63,7 +63,7 @@ router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { name, state } = req.body;
 
-    const { data: updatedBranch, error } = await supabase
+    const { data: updatedBranch, error } = await supabaseAdmin
       .from('branches')
       .update({ name, state })
       .eq('id', req.params.id)
@@ -83,7 +83,7 @@ router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
 // Delete branch (admin only)
 router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('branches')
       .delete()
       .eq('id', req.params.id);

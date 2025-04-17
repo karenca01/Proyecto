@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
@@ -25,8 +25,8 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert new user
-    const { data: newUser, error } = await supabase
+    // Insert new user using admin client to bypass RLS
+    const { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert([{ email, password: hashedPassword, user_type }])
       .select()

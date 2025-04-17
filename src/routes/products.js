@@ -1,6 +1,25 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
 
 const router = express.Router();
 
@@ -45,12 +64,37 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create new product (admin only)
-router.post('/', authenticateToken, isAdmin, async (req, res) => {
+// Create new product with image upload (admin only)
+router.post('/', authenticateToken, isAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { category_id, name, price, size, photo_url } = req.body;
+    const { category_id, name, price, size } = req.body;
+    let photo_url = null;
+    
+    // Handle image upload if file is provided
+    if (req.file) {
+      const fileExt = path.extname(req.file.originalname).toLowerCase();
+      const fileName = `${Date.now()}${fileExt}`;
+      
+      // Upload to Supabase Storage using admin client to bypass RLS
+      const { data, error: uploadError } = await supabaseAdmin.storage
+        .from(process.env.SUPABASE_BUCKET || 'products')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          cacheControl: '3600'
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from(process.env.SUPABASE_BUCKET || 'products')
+        .getPublicUrl(fileName);
+      
+      photo_url = urlData.publicUrl;
+    }
 
-    const { data: newProduct, error } = await supabase
+    // Create product with image URL using admin client to bypass RLS
+    const { data: newProduct, error } = await supabaseAdmin
       .from('products')
       .insert([{ category_id, name, price, size, photo_url }])
       .select(`
@@ -63,16 +107,41 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
     res.status(201).json(newProduct);
   } catch (error) {
     console.error('Error creating product:', error);
-    res.status(500).json({ error: 'Failed to create product' });
+    res.status(500).json({ error: 'Failed to create product: ' + error.message });
   }
 });
 
-// Update product (admin only)
-router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
+// Update product with image upload (admin only)
+router.put('/:id', authenticateToken, isAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { category_id, name, price, size, photo_url } = req.body;
+    const { category_id, name, price, size, photo_url: existingPhotoUrl } = req.body;
+    let photo_url = existingPhotoUrl;
+    
+    // Handle image upload if file is provided
+    if (req.file) {
+      const fileExt = path.extname(req.file.originalname).toLowerCase();
+      const fileName = `${Date.now()}${fileExt}`;
+      
+      // Upload to Supabase Storage using admin client to bypass RLS
+      const { data, error: uploadError } = await supabaseAdmin.storage
+        .from(process.env.SUPABASE_BUCKET || 'products')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          cacheControl: '3600'
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from(process.env.SUPABASE_BUCKET || 'products')
+        .getPublicUrl(fileName);
+      
+      photo_url = urlData.publicUrl;
+    }
 
-    const { data: updatedProduct, error } = await supabase
+    // Update product with new data using admin client to bypass RLS
+    const { data: updatedProduct, error } = await supabaseAdmin
       .from('products')
       .update({ category_id, name, price, size, photo_url })
       .eq('id', req.params.id)
@@ -88,14 +157,14 @@ router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
     res.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
-    res.status(500).json({ error: 'Failed to update product' });
+    res.status(500).json({ error: 'Failed to update product: ' + error.message });
   }
 });
 
 // Delete product (admin only)
 router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('products')
       .delete()
       .eq('id', req.params.id);

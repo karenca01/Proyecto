@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
-import { supabase } from '../index.js';
+import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
@@ -61,7 +61,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
     if (existingInventory) {
       // Update existing inventory
       const newQuantity = existingInventory.quantity + quantity;
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('inventory')
         .update({ quantity: newQuantity })
         .eq('id', existingInventory.id)
@@ -70,8 +70,8 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
       
       result = { data, error };
     } else {
-      // Create new inventory entry
-      const { data, error } = await supabase
+      // Create new inventory entry using admin client to bypass RLS
+      const { data, error } = await supabaseAdmin
         .from('inventory')
         .insert([{ product_id, branch_id, quantity }])
         .select()
@@ -93,7 +93,7 @@ router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { quantity } = req.body;
 
-    const { data: updatedInventory, error } = await supabase
+    const { data: updatedInventory, error } = await supabaseAdmin
       .from('inventory')
       .update({ quantity })
       .eq('id', req.params.id)
@@ -113,7 +113,7 @@ router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
 // Delete inventory entry (admin only)
 router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('inventory')
       .delete()
       .eq('id', req.params.id);
