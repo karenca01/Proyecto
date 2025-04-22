@@ -4,17 +4,24 @@ import { supabase, supabaseAdmin } from '../index.js';
 
 const router = express.Router();
 
-// Get all inventory
+// Get all inventory or filter by branch_id
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { data: inventory, error } = await supabase
+    const { branch_id } = req.query;
+    let query = supabase
       .from('inventory')
       .select(`
         *,
         products (name, price, size),
         branches (name)
-      `)
-      .order('id');
+      `);
+    
+    // Apply branch_id filter if provided
+    if (branch_id) {
+      query = query.eq('branch_id', branch_id);
+    }
+    
+    const { data: inventory, error } = await query.order('id');
 
     if (error) throw error;
     res.json(inventory);

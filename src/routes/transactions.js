@@ -51,7 +51,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// Record a new transaction
+// Record a new transaction (single product)  
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { product_id, branch_id } = req.body;
@@ -76,7 +76,7 @@ router.post('/', authenticateToken, async (req, res) => {
     // Start transaction using admin client to bypass RLS
     const { data: transaction, error: transactionError } = await supabaseAdmin
       .from('transactions')
-      .insert([{ user_id, product_id, branch_id }])
+      .insert([{ user_id, product_id, branch_id, quantity: 1 }])
       .select(`
         *,
         products (name, price, size),
@@ -98,6 +98,114 @@ router.post('/', authenticateToken, async (req, res) => {
     res.status(201).json(transaction);
   } catch (error) {
     console.error('Error creating transaction:', error);
+    res.status(500).json({ error: 'Failed to create transaction' });
+  }
+});
+
+// Record a new transaction with multiple items
+router.post('/with-items', authenticateToken, async (req, res) => {
+  try {
+    const { user_id, branch_id, items } = req.body;
+    
+    // Validate request
+    if (!user_id || !branch_id || !items || !items.length) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Check if all products are available in branch inventory
+    const inventoryChecks = await Promise.all(
+      items.map(async (item) => {
+        const { data: inventory, error } = await supabase
+          .from('inventory')
+          .select('quantity')
+          .eq('product_id', item.product_id)
+          .eq('branch_id', branch_id)
+          .single();
+          
+        if (error || !inventory) {
+          return { 
+            product_id: item.product_id, 
+            available: false, 
+            error: 'Product not available in this branch' 
+          };
+        }
+        
+        if (inventory.quantity < item.quantity) {
+          return { 
+            product_id: item.product_id, 
+            available: false, 
+            error: 'Insufficient stock', 
+            requested: item.quantity, 
+            available: inventory.quantity 
+          };
+        }
+        
+        return { 
+          product_id: item.product_id, 
+          available: true, 
+          inventory 
+        };
+      })
+    );
+    
+    // Check if any products are unavailable
+    const unavailableItems = inventoryChecks.filter(check => !check.available);
+    if (unavailableItems.length > 0) {
+      return res.status(400).json({ 
+        error: 'Some products are unavailable', 
+        details: unavailableItems 
+      });
+    }
+    
+    // Start a transaction for each item
+    const transactionPromises = items.map(async (item) => {
+      // Insert transaction record
+      const { data: transaction, error: transactionError } = await supabaseAdmin
+        .from('transactions')
+        .insert([{ 
+          user_id, 
+          product_id: item.product_id, 
+          branch_id,
+          quantity: item.quantity
+        }])
+        .select();
+      
+      if (transactionError) throw transactionError;
+      
+      // Get the inventory check for this item
+      const inventoryCheck = inventoryChecks.find(check => check.product_id === item.product_id);
+      
+      // Update inventory
+      const { error: updateError } = await supabaseAdmin
+        .from('inventory')
+        .update({ quantity: inventoryCheck.inventory.quantity - item.quantity })
+        .eq('product_id', item.product_id)
+        .eq('branch_id', branch_id);
+      
+      if (updateError) throw updateError;
+      
+      return transaction[0];
+    });
+    
+    // Wait for all transactions to complete
+    const completedTransactions = await Promise.all(transactionPromises);
+    
+    // Fetch complete transaction data with related information
+    const { data: transactionsWithDetails, error: fetchError } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        products (name, price, size),
+        branches (name)
+      `)
+      .in('id', completedTransactions.map(t => t.id))
+      .order('date', { ascending: false });
+    
+    if (fetchError) throw fetchError;
+    
+    res.status(201).json(transactionsWithDetails);
+  } catch (error) {
+    console.error('Error creating transaction with items:', error);
     res.status(500).json({ error: 'Failed to create transaction' });
   }
 });
