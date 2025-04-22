@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../App';
 import {
   HomeIcon,
   ShoppingBagIcon,
@@ -18,10 +19,16 @@ const navigation = [
 function CustomerDashboard() {
   const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState('Dashboard');
+  
+  const { setUser } = useContext(AuthContext);
 
   const handleLogout = () => {
+    // Clear all authentication data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Use the context to reset user state
+    setUser(null);
+    // Redirect to login page
     navigate('/login');
   };
 
