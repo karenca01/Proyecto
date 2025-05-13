@@ -501,9 +501,9 @@ function Products() {
                 <tr key={product.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="h-12 w-12 overflow-hidden rounded-md">
-                      {product.image_url ? (
+                      {product.photo_url ? (
                         <img 
-                          src={product.image_url} 
+                          src={product.photo_url} 
                           alt={product.name} 
                           className="w-full h-full object-cover"
                         />

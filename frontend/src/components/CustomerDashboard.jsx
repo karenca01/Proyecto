@@ -8,6 +8,7 @@ import {
   ClockIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import CustomerStorefront from './customer/CustomerStorefront'; // Import the new component
 
 const navigation = [
   { name: 'Dashboard', icon: HomeIcon },
@@ -80,10 +81,8 @@ function CustomerDashboard() {
                     </div>
                   )}
                   {currentSection === 'Products' && (
-                    <div className="text-center py-12">
-                      <h3 className="text-lg font-medium text-gray-900">Products</h3>
-                      <p className="mt-2 text-sm text-gray-500">Browse our available products.</p>
-                    </div>
+                    // Replace placeholder with the actual storefront component
+                    <CustomerStorefront />
                   )}
                   {currentSection === 'My Profile' && (
                     <div className="text-center py-12">

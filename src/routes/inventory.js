@@ -12,7 +12,7 @@ router.get('/', authenticateToken, async (req, res) => {
       .from('inventory')
       .select(`
         *,
-        products (name, price, size),
+        products (name, price, size, photo_url),
         branches (name)
       `);
     
@@ -38,7 +38,7 @@ router.get('/product/:productId', authenticateToken, async (req, res) => {
       .from('inventory')
       .select(`
         *,
-        products (name, price, size),
+        products (name, price, size, photo_url),
         branches (name)
       `)
       .eq('product_id', req.params.productId);
