@@ -8,7 +8,9 @@ import {
   ClockIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
-import CustomerStorefront from './customer/CustomerStorefront'; // Import the new component
+import CustomerStorefront from './customer/CustomerStorefront';
+import UserProfile from './customer/UserProfile';
+import TransactionHistory from './TransactionHistory';
 
 const navigation = [
   { name: 'Dashboard', icon: HomeIcon },
@@ -84,18 +86,8 @@ function CustomerDashboard() {
                     // Replace placeholder with the actual storefront component
                     <CustomerStorefront />
                   )}
-                  {currentSection === 'My Profile' && (
-                    <div className="text-center py-12">
-                      <h3 className="text-lg font-medium text-gray-900">My Profile</h3>
-                      <p className="mt-2 text-sm text-gray-500">View and update your profile information.</p>
-                    </div>
-                  )}
-                  {currentSection === 'Order History' && (
-                    <div className="text-center py-12">
-                      <h3 className="text-lg font-medium text-gray-900">Order History</h3>
-                      <p className="mt-2 text-sm text-gray-500">View your past orders and their status.</p>
-                    </div>
-                  )}
+                  {currentSection === 'My Profile' && <UserProfile />}
+                  {currentSection === 'Order History' && <TransactionHistory />}
                 </div>
               </div>
             </div>

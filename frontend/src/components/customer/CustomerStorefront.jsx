@@ -19,36 +19,30 @@ function CustomerStorefront() {
       if (!response.ok) throw new Error('Failed to fetch branches');
       const data = await response.json();
       setBranches(data);
-      // Optionally select the first branch by default or user's preferred branch
-      if (data.length > 0) {
-        // Prioritize user's branch if available
-        const userBranch = user?.branch_id || data[0].id;
-        setSelectedBranchId(userBranch);
-      }
+      // No default branch selection - show all products initially
     } catch (err) {
       setError(`Error fetching branches: ${err.message}`);
       console.error("Error fetching branches:", err);
     }
   };
 
-  // Fetch products based on selected branch
-  const fetchProductsByBranch = async (branchId) => {
-    if (!branchId) return;
+  // Fetch all products or filter by branch
+  const fetchProducts = async (branchId = '') => {
     setLoading(true);
     setError(null);
     try {
-      // Assuming an endpoint like /products/branch/:branchId exists or adjust as needed
-      // Or fetch all products and filter, or fetch inventory by branch
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/inventory?branch_id=${branchId}`, {
+      const url = 'http://localhost:3000/inventory';
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      if (!response.ok) throw new Error(`Failed to fetch products for branch ${branchId}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
       const inventoryData = await response.json();
-      // Assuming inventoryData is an array of { product: {...}, quantity: X }
-      const productsWithStock = inventoryData
+      
+      let productsWithStock = inventoryData
         .filter(item => item.quantity > 0)
         .map(item => ({
           id: item.product_id,
@@ -57,9 +51,16 @@ function CustomerStorefront() {
           price: item.products.price,
           photo: item.products.photo_url,
           description: item.products.description,
-          stock: item.quantity
+          stock: item.quantity,
+          branch_id: item.branch_id,
+          branch_name: item.branches?.name || 'Unknown Branch'
         }));
 
+      // Filter by branch if selected
+      if (selectedBranchId) {
+        productsWithStock = productsWithStock.filter(item => item.branch_id.toString() === selectedBranchId);
+      }
+      
       setProducts(productsWithStock);
     } catch (err) {
       setError(`Error fetching products: ${err.message}`);
@@ -75,9 +76,7 @@ function CustomerStorefront() {
   }, []);
 
   useEffect(() => {
-    if (selectedBranchId) {
-      fetchProductsByBranch(selectedBranchId);
-    }
+    fetchProducts(selectedBranchId);
   }, [selectedBranchId]);
 
   const handleAddToCart = (productToAdd) => {
@@ -164,16 +163,16 @@ function CustomerStorefront() {
     <div className="container mx-auto px-4 py-8">
       <h2 className="text-3xl font-bold mb-6 text-gray-800">Storefront</h2>
 
-      {/* Branch Selector */}
+      {/* Branch Filter */}
       <div className="mb-6">
-        <label htmlFor="branch-select" className="block text-sm font-medium text-gray-700 mb-2">Select Branch:</label>
+        <label htmlFor="branch-select" className="block text-sm font-medium text-gray-700 mb-2">Filter by Branch:</label>
         <select
           id="branch-select"
           value={selectedBranchId}
           onChange={(e) => setSelectedBranchId(e.target.value)}
           className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
         >
-          <option value="" disabled>-- Select a Branch --</option>
+          <option value="">All Branches</option>
           {branches.map(branch => (
             <option key={branch.id} value={branch.id}>{branch.name} - {branch.location}</option>
           ))}
