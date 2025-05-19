@@ -7,15 +7,37 @@ const router = express.Router();
 // Get all transactions (admin only)
 router.get('/', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { data: transactions, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('transactions')
       .select(`
         *,
         users (email),
         products (name, price, size),
         branches (name)
-      `)
-      .order('date', { ascending: false });
+      `);
+
+    // Apply filters if provided
+    const { branch_id, start_date, end_date } = req.query;
+
+    if (branch_id) {
+      query = query.eq('branch_id', branch_id);
+    }
+
+    if (start_date) {
+      query = query.gte('date', start_date);
+    }
+
+    if (end_date) {
+      // Add one day to end_date to include the entire day
+      const nextDay = new Date(end_date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      query = query.lt('date', nextDay.toISOString());
+    }
+
+    // Apply ordering
+    query = query.order('date', { ascending: false });
+
+    const { data: transactions, error } = await query;
 
     if (error) throw error;
     res.json(transactions);
@@ -33,15 +55,37 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const { data: transactions, error } = await supabase
+    let query = supabase
       .from('transactions')
       .select(`
         *,
         products (name, price, size),
         branches (name)
       `)
-      .eq('user_id', req.params.userId)
-      .order('date', { ascending: false });
+      .eq('user_id', req.params.userId);
+
+    // Apply filters if provided
+    const { branch_id, start_date, end_date } = req.query;
+
+    if (branch_id) {
+      query = query.eq('branch_id', branch_id);
+    }
+
+    if (start_date) {
+      query = query.gte('date', start_date);
+    }
+
+    if (end_date) {
+      // Add one day to end_date to include the entire day
+      const nextDay = new Date(end_date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      query = query.lt('date', nextDay.toISOString());
+    }
+
+    // Apply ordering
+    query = query.order('date', { ascending: false });
+
+    const { data: transactions, error } = await query;
 
     if (error) throw error;
     res.json(transactions);
