@@ -17,7 +17,7 @@ function ShoppingCart({ cartItems, onRemoveFromCart, onUpdateQuantity, onCheckou
             <div key={item.id} className="flex items-center justify-between border-b pb-3 last:border-b-0">
               <div className="flex items-center space-x-3">
                 <img 
-                  src={item.image_url || 'https://via.placeholder.com/50?text=No+Image'} 
+                  src={item.photo || 'https://via.placeholder.com/50?text=No+Image'} 
                   alt={item.name} 
                   className="w-12 h-12 object-cover rounded"
                   onError={(e) => { e.target.onerror = null; e.target.src='https://via.placeholder.com/50?text=No+Image'; }}
