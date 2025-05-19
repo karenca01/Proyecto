@@ -25,16 +25,20 @@ function Transactions() {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Build query string from filters
+      // Build query string for additional filters
       let queryParams = new URLSearchParams();
       if (filters.branch_id) queryParams.append('branch_id', filters.branch_id);
-      if (filters.user_id) queryParams.append('user_id', filters.user_id);
       if (filters.start_date) queryParams.append('start_date', filters.start_date);
       if (filters.end_date) queryParams.append('end_date', filters.end_date);
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
       
-      const response = await fetch(`http://localhost:3000/transactions${queryString}`, {
+      // Use the correct URL format when filtering by user
+      const baseUrl = filters.user_id
+        ? `http://localhost:3000/transactions/user/${filters.user_id}`
+        : 'http://localhost:3000/transactions';
+      
+      const response = await fetch(`${baseUrl}${queryString}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

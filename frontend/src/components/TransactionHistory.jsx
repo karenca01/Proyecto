@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { CalendarIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { AuthContext } from '../App';
 
 function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
@@ -7,6 +8,7 @@ function TransactionHistory() {
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [branches, setBranches] = useState([]);
+  const { user } = useContext(AuthContext);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -20,22 +22,25 @@ function TransactionHistory() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const userData = JSON.parse(localStorage.getItem('user'));
       
-      if (!userData || !userData.id) {
+      if (!user || !user.id) {
         throw new Error('User information not found');
       }
       
-      // Build query string from filters
+      // Build query string for additional filters
       let queryParams = new URLSearchParams();
-      queryParams.append('user_id', userData.id); // Always filter by current user
       if (filters.branch_id) queryParams.append('branch_id', filters.branch_id);
       if (filters.start_date) queryParams.append('start_date', filters.start_date);
       if (filters.end_date) queryParams.append('end_date', filters.end_date);
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
       
-      const response = await fetch(`http://localhost:3000/transactions${queryString}`, {
+      // Use the correct URL format for user transactions
+      const baseUrl = user.user_type !== 'admin' 
+        ? `http://localhost:3000/transactions/user/${user.id}` 
+        : 'http://localhost:3000/transactions';
+      
+      const response = await fetch(`${baseUrl}${queryString}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -97,16 +102,20 @@ function TransactionHistory() {
 
   // Format date for display
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return date.toLocaleDateString(undefined, options);
   };
 
   // Format currency for display
   const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(Number(amount));
   };
 
   return (
@@ -133,6 +142,20 @@ function TransactionHistory() {
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">
           <h3 className="text-lg font-medium mb-4">Filter Transactions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Admin-only user filter */}
+            {user.user_type === 'admin' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                <input
+                  type="text"
+                  name="user_id"
+                  value={filters.user_id || ''}
+                  onChange={handleFilterChange}
+                  placeholder="Filter by user ID"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
               <select
@@ -193,10 +216,17 @@ function TransactionHistory() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  {user.user_type === 'admin' && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                  )}
+                  
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -206,10 +236,17 @@ function TransactionHistory() {
                   return (
                     <tr key={transaction.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{transaction.id}</td>
+                      {user.user_type === 'admin' && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{transaction.user_id}</td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{branch ? branch.name : 'Unknown'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(transaction.amount)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(transaction.transaction_date)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{transaction.description}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.products?.name || 'Unknown'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(transaction.products?.price || 0)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{transaction.quantity}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {formatCurrency((transaction.products?.price || 0) * transaction.quantity)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(transaction.date)}</td>
                     </tr>
                   );
                 })}
