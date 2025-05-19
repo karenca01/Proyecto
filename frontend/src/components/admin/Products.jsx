@@ -23,6 +23,7 @@ function Products() {
   const fileInputRef = useRef(null);
 
   const sizeOptions = [
+    { value: 'XS', label: 'XS' },
     { value: 'S', label: 'S' },
     { value: 'M', label: 'M' },
     { value: 'L', label: 'L' },

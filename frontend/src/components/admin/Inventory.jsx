@@ -11,7 +11,7 @@ function Inventory() {
   const [formData, setFormData] = useState({ product_id: '', branch_id: '', quantity: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [currentInventoryId, setCurrentInventoryId] = useState(null);
-  const [filterBranch, setFilterBranch] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('');
 
   // Fetch all inventory items
   const fetchInventory = async () => {
@@ -156,8 +156,8 @@ function Inventory() {
   };
 
   // Filter inventory by branch
-  const filteredInventory = filterBranch
-    ? inventory.filter(item => item.branch_id.toString() === filterBranch)
+  const filteredInventory = selectedBranchId
+    ? inventory.filter(item => item.branch_id.toString() === selectedBranchId)
     : inventory;
 
   return (
@@ -197,14 +197,14 @@ function Inventory() {
         </label>
         <select
           id="filterBranch"
-          value={filterBranch}
-          onChange={(e) => setFilterBranch(e.target.value)}
+          value={selectedBranchId}
+          onChange={(e) => setSelectedBranchId(e.target.value)}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
         >
           <option value="">All Branches</option>
           {branches.map((branch) => (
             <option key={branch.id} value={branch.id.toString()}>
-              {branch.name}
+              {branch.name} - {branch.state}
             </option>
           ))}
         </select>
@@ -252,9 +252,7 @@ function Inventory() {
                 >
                   <option value="">Select a branch</option>
                   {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
+                    <option key={branch.id} value={branch.id}>{branch.name} - {branch.state}</option>
                   ))}
                 </select>
               </div>

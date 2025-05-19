@@ -174,7 +174,7 @@ function CustomerStorefront() {
         >
           <option value="">All Branches</option>
           {branches.map(branch => (
-            <option key={branch.id} value={branch.id}>{branch.name} - {branch.location}</option>
+            <option key={branch.id} value={branch.id}>{branch.name} - {branch.state}</option>
           ))}
         </select>
       </div>
