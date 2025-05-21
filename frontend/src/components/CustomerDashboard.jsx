@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import {
@@ -22,8 +22,47 @@ const navigation = [
 function CustomerDashboard() {
   const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState('Dashboard');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const { setUser } = useContext(AuthContext);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:3000/inventory', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch products');
+        
+        const inventoryData = await response.json();
+        const productsWithStock = inventoryData
+          .filter(item => item.quantity > 0)
+          .map(item => ({
+            id: item.product_id,
+            name: item.products.name,
+            price: item.products.price,
+            photo: item.products.photo_url,
+            stock: item.quantity,
+            branch_name: item.branches?.name || 'Unknown Branch'
+          }));
+        
+        setProducts(productsWithStock);
+      } catch (err) {
+        setError('Failed to load products');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleLogout = () => {
     // Clear all authentication data
@@ -36,7 +75,7 @@ function CustomerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
         <div className="hidden md:flex md:flex-shrink-0">
@@ -70,18 +109,37 @@ function CustomerDashboard() {
         {/* Main content */}
         <div className="flex flex-col flex-1 overflow-hidden">
           <main className="flex-1 relative overflow-y-auto focus:outline-none">
+            {/* Product Banner */}
+            {currentSection === 'Dashboard' && (
+              <div className="w-full h-96 overflow-hidden mb-6">
+                <div className="flex space-x-6 p-6 overflow-x-auto">
+                  {products && products.slice(0, 5).map((product) => (
+                    <div key={product.id} className="flex-none w-80">
+                      <div className="relative h-72 w-full rounded-lg overflow-hidden shadow-lg">
+
+                        <img
+                          src={product.photo || 'https://via.placeholder.com/300?text=No+Image'}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://via.placeholder.com/300?text=No+Image';
+                          }}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          <p className="text-xs">${product.price}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="py-6">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-                <h1 className="text-2xl font-semibold text-gray-900">{currentSection}</h1>
-              </div>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
                 <div className="py-4">
-                  {currentSection === 'Dashboard' && (
-                    <div className="text-center py-12">
-                      <h3 className="text-lg font-medium text-gray-900">Welcome to Your Dashboard</h3>
-                      <p className="mt-2 text-sm text-gray-500">Browse our products and manage your orders.</p>
-                    </div>
-                  )}
                   {currentSection === 'Products' && (
                     // Replace placeholder with the actual storefront component
                     <CustomerStorefront />
