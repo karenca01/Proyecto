@@ -111,24 +111,24 @@ function CustomerDashboard() {
           <main className="flex-1 relative overflow-y-auto focus:outline-none">
             {/* Product Banner */}
             {currentSection === 'Dashboard' && (
-              <div className="w-full h-96 overflow-hidden mb-6">
-                <div className="flex space-x-6 p-6 overflow-x-auto">
+              <div className="w-full h-[48rem] overflow-hidden mb-6">
+                <div className="flex space-x-10 p-10 overflow-x-auto">
                   {products && products.slice(0, 5).map((product) => (
-                    <div key={product.id} className="flex-none w-80">
-                      <div className="relative h-72 w-full rounded-lg overflow-hidden shadow-lg">
+                    <div key={product.id} className="flex-none w-[36rem]">
+                      <div className="relative h-[44rem] w-full rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300">
 
                         <img
-                          src={product.photo || 'https://via.placeholder.com/300?text=No+Image'}
+                          src={product.photo || 'https://via.placeholder.com/400?text=No+Image'}
                           alt={product.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/300?text=No+Image';
+                            e.target.src = 'https://via.placeholder.com/400?text=No+Image';
                           }}
                         />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
-                          <p className="text-sm font-medium truncate">{product.name}</p>
-                          <p className="text-xs">${product.price}</p>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-6">
+                          <p className="text-lg font-semibold truncate">{product.name}</p>
+                          <p className="text-base mt-1">${product.price}</p>
                         </div>
                       </div>
                     </div>
