@@ -6,6 +6,21 @@ function ShoppingCart({ cartItems, onRemoveFromCart, onUpdateQuantity, onCheckou
     return cartItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2);
   };
 
+  const handleCheckout = () => {
+    // Group items by their associated branch
+    const itemsByBranch = cartItems.reduce((acc, item) => {
+      const branchId = item.branch_id;
+      if (!acc[branchId]) {
+        acc[branchId] = [];
+      }
+      acc[branchId].push(item);
+      return acc;
+    }, {});
+
+    // Pass the grouped items to the checkout handler
+    onCheckout(itemsByBranch);
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
       <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Shopping Cart</h3>
@@ -25,6 +40,7 @@ function ShoppingCart({ cartItems, onRemoveFromCart, onUpdateQuantity, onCheckou
                 <div>
                   <p className="text-sm font-medium text-gray-900 truncate w-32">{item.name}</p>
                   <p className="text-xs text-gray-500">${item.price.toFixed(2)}</p>
+                  <p className="text-xs text-gray-400">{item.branch_name || 'Default Branch'}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -62,7 +78,7 @@ function ShoppingCart({ cartItems, onRemoveFromCart, onUpdateQuantity, onCheckou
             <span className="text-xl font-bold text-indigo-600">${calculateTotal()}</span>
           </div>
           <button
-            onClick={onCheckout}
+            onClick={handleCheckout}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md shadow-sm transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Proceed to Checkout

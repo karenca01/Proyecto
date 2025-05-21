@@ -111,7 +111,7 @@ function CustomerStorefront() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (itemsByBranch) => {
     if (!user || !user.id) {
       setError('User not logged in.');
       return;
@@ -122,37 +122,38 @@ function CustomerStorefront() {
     }
 
     const token = localStorage.getItem('token');
-    const transactionData = {
-      user_id: user.id,
-      branch_id: selectedBranchId,
-      // The backend expects an 'items' array with product_id and quantity
-      items: cartItems.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity
-        // Price is not needed here, backend calculates/retrieves it
-      }))
-    };
-
+    
     try {
-      // Call the correct endpoint for multiple items
-      const response = await fetch('http://localhost:3000/transactions/with-items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(transactionData)
-      });
+      // Process transactions for each branch
+      for (const branchId in itemsByBranch) {
+        const branchItems = itemsByBranch[branchId];
+        const transactionData = {
+          user_id: user.id,
+          branch_id: branchId,
+          items: branchItems.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity
+          }))
+        };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create transaction');
+        const response = await fetch('http://localhost:3000/transactions/with-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(transactionData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create transaction');
+        }
       }
 
       alert('Purchase successful!');
       setCartItems([]); // Clear cart after successful purchase
-      // Optionally refetch products to update stock, though backend should handle this
-      fetchProductsByBranch(selectedBranchId);
+      fetchProducts(selectedBranchId); // Refresh products
     } catch (err) {
       setError(`Checkout failed: ${err.message}`);
       console.error("Checkout error:", err);
